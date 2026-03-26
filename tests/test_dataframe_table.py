@@ -636,4 +636,11 @@ class TestRegressionFilterBarSizing:
             f"columns total {total} exceeds viewport {viewport_w} after shrink"
         )
 
-
+class TestRegressionFilters:
+    
+    def test_filters_do_not_accept_parent(self):
+        """Filter constructors should not accept a `parent` parameter."""
+        import inspect
+        for cls in (TextFilter, NumericFilter, DropdownFilter):
+            params = inspect.signature(cls.__init__).parameters
+            assert "parent" not in params, f"{cls.__name__} still accepts `parent`"

@@ -44,8 +44,8 @@ class TextFilter(AbstractFilter):
 
     MODES = ["Contains", "Equals", "Regex"]
 
-    def __init__(self, placeholder: str = "Filter…", parent=None):
-        super().__init__(parent)
+    def __init__(self, placeholder: str = "Filter…"):
+        super().__init__()
         layout = QHBoxLayout(self)
         layout.setContentsMargins(1, 1, 1, 1)
         layout.setSpacing(2)
@@ -91,8 +91,8 @@ class NumericFilter(AbstractFilter):
 
     OPS = ["=", "<", ">", "<=", ">=", "!="]
 
-    def __init__(self, placeholder: str = "Value", parent=None):
-        super().__init__(parent)
+    def __init__(self, placeholder: str = "Value"):
+        super().__init__()
         layout = QHBoxLayout(self)
         layout.setContentsMargins(1, 1, 1, 1)
         layout.setSpacing(2)
@@ -138,8 +138,8 @@ class DropdownFilter(AbstractFilter):
 
     _ALL_LABEL = "(All)"
 
-    def __init__(self, options: Optional[Sequence[str]] = None, parent=None):
-        super().__init__(parent)
+    def __init__(self, options: Optional[Sequence[str]] = None):
+        super().__init__()
         layout = QHBoxLayout(self)
         layout.setContentsMargins(1, 1, 1, 1)
 
