@@ -232,6 +232,14 @@ class DataFrameTable(QWidget):
                 col.filter_widget.blockSignals(False)
         self._model.rebuild_view()
 
+    def get_filter(self, key: str):
+        """Return the filter widget for *key*, or ``None`` if the column
+        has no filter or the key does not exist."""
+        for col in self._columns:
+            if col.key == key:
+                return col.filter_widget
+        return None
+
     # ---- accessors ----------------------------------------------------
 
     @property
