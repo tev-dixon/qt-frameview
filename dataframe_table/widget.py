@@ -21,7 +21,8 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from enum import Enum
+from typing import List, Optional, Set, Union
 
 import pandas as pd
 from PyQt6.QtCore import QItemSelectionModel, QTimer, Qt, pyqtSignal
@@ -45,11 +46,36 @@ class TableStyle:
     header_font_size: Optional[int] = None
 
 
-_SELECTION_MODES = {
-    "single": QAbstractItemView.SelectionMode.SingleSelection,
-    "multi": QAbstractItemView.SelectionMode.MultiSelection,
-    "extended": QAbstractItemView.SelectionMode.ExtendedSelection,
+class SelectionMode(Enum):
+    """Row selection behaviour for :class:`DataFrameTable`."""
+
+    Single = "single"
+    Multi = "multi"
+    Extended = "extended"
+
+
+_SELECTION_MODE_MAP = {
+    SelectionMode.Single: QAbstractItemView.SelectionMode.SingleSelection,
+    SelectionMode.Multi: QAbstractItemView.SelectionMode.MultiSelection,
+    SelectionMode.Extended: QAbstractItemView.SelectionMode.ExtendedSelection,
 }
+
+# Also accept plain strings for convenience
+_SELECTION_MODE_STRINGS = {m.value: m for m in SelectionMode}
+
+
+def _resolve_selection_mode(
+    mode: Union[str, SelectionMode],
+) -> QAbstractItemView.SelectionMode:
+    if isinstance(mode, str):
+        mode = _SELECTION_MODE_STRINGS.get(mode.lower())
+        if mode is None:
+            raise ValueError(
+                f"Unknown selection mode. Use one of: "
+                f"{', '.join(repr(m.value) for m in SelectionMode)} "
+                f"or a SelectionMode enum member."
+            )
+    return _SELECTION_MODE_MAP[mode]
 
 
 class DataFrameTable(QWidget):
@@ -66,7 +92,7 @@ class DataFrameTable(QWidget):
     def __init__(
         self,
         columns: List[ColumnDef],
-        selection_mode: str = "extended",
+        selection_mode: Union[str, SelectionMode] = SelectionMode.Extended,
         style: Optional[TableStyle] = None,
         parent: Optional[QWidget] = None,
     ):
@@ -82,9 +108,7 @@ class DataFrameTable(QWidget):
         self._view.setModel(self._model)
         self._apply_style()
         self._view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self._view.setSelectionMode(
-            _SELECTION_MODES.get(selection_mode, QAbstractItemView.SelectionMode.ExtendedSelection)
-        )
+        self._view.setSelectionMode(_resolve_selection_mode(selection_mode))
         self._view.horizontalHeader().setStretchLastSection(False)
         self._view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self._view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

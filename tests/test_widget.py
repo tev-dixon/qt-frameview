@@ -5,10 +5,11 @@ from __future__ import annotations
 import time
 
 import pandas as pd
+import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QAbstractItemView, QApplication
 
-from dataframe_table import ColumnDef, DataFrameTable, NumericFilter, TableStyle, TextFilter
+from dataframe_table import ColumnDef, DataFrameTable, NumericFilter, TableStyle, TextFilter, SelectionMode
 from conftest import _basic_columns, _sample_df
 
 
@@ -230,3 +231,41 @@ class TestRegressionFilterBarSizing:
         assert total <= viewport_w + 5, (
             f"columns total {total} exceeds viewport {viewport_w} after shrink"
         )
+
+
+class TestSelectionMode:
+    """SelectionMode enum and backward-compatible string support."""
+
+    def test_enum_single(self, qtbot, sample_df):
+        t = DataFrameTable(columns=_basic_columns(), selection_mode=SelectionMode.Single)
+        qtbot.addWidget(t)
+        t.set_data(sample_df)
+        assert t.table_view.selectionMode() == QAbstractItemView.SelectionMode.SingleSelection
+
+    def test_enum_multi(self, qtbot, sample_df):
+        t = DataFrameTable(columns=_basic_columns(), selection_mode=SelectionMode.Multi)
+        qtbot.addWidget(t)
+        t.set_data(sample_df)
+        assert t.table_view.selectionMode() == QAbstractItemView.SelectionMode.MultiSelection
+
+    def test_enum_extended(self, qtbot, sample_df):
+        t = DataFrameTable(columns=_basic_columns(), selection_mode=SelectionMode.Extended)
+        qtbot.addWidget(t)
+        t.set_data(sample_df)
+        assert t.table_view.selectionMode() == QAbstractItemView.SelectionMode.ExtendedSelection
+
+    def test_string_still_works(self, qtbot, sample_df):
+        t = DataFrameTable(columns=_basic_columns(), selection_mode="single")
+        qtbot.addWidget(t)
+        t.set_data(sample_df)
+        assert t.table_view.selectionMode() == QAbstractItemView.SelectionMode.SingleSelection
+
+    def test_string_case_insensitive(self, qtbot, sample_df):
+        t = DataFrameTable(columns=_basic_columns(), selection_mode="Multi")
+        qtbot.addWidget(t)
+        t.set_data(sample_df)
+        assert t.table_view.selectionMode() == QAbstractItemView.SelectionMode.MultiSelection
+
+    def test_invalid_string_raises(self, qtbot):
+        with pytest.raises(ValueError, match="Unknown selection mode"):
+            DataFrameTable(columns=_basic_columns(), selection_mode="invalid")
