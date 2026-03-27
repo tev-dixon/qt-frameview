@@ -9,7 +9,14 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QAbstractItemView, QApplication
 
-from dataframe_table import ColumnDef, DataFrameTable, NumericFilter, TableStyle, TextFilter, SelectionMode
+from dataframe_table import (
+    ColumnDef,
+    DataFrameTable,
+    NumericFilter,
+    SelectionMode,
+    TableStyle,
+    TextFilter,
+)
 from conftest import _basic_columns, _sample_df
 
 
@@ -142,6 +149,75 @@ class TestRegressionResizePerformance:
         table._filter_bar.sync_widths = counting_sync
         table._do_stretch()
         assert sync_count == 1, f"sync_widths called {sync_count} times, expected 1"
+
+
+class TestRegressionTimerAfterDestroy:
+    """Fix: debounce timer must not fire on a destroyed widget.
+
+    On Windows, resizing then closing within the 16ms debounce window caused
+    an access violation because the timer callback accessed freed C++ memory.
+    """
+
+    def test_close_stops_timer(self, qtbot, sample_df):
+        """closeEvent must stop the debounce timer."""
+        t = DataFrameTable(columns=_basic_columns())
+        qtbot.addWidget(t)
+        t.set_data(sample_df)
+        t.show()
+
+        # Start a resize (arms the timer)
+        t.resize(600, 400)
+        assert t._resize_timer.isActive()
+
+        # Close the widget — timer must stop
+        t.close()
+        assert not t._resize_timer.isActive(), "timer still active after close"
+
+    def test_deferred_stretch_survives_destroyed_view(self, qtbot, sample_df):
+        """_deferred_stretch must not crash if the underlying C++ object is gone.
+
+        On Linux/offscreen, deleteLater may not trigger the RuntimeError that
+        Windows produces, so we simulate it by patching viewport() to raise.
+        """
+        t = DataFrameTable(columns=_basic_columns())
+        qtbot.addWidget(t)
+        t.set_data(sample_df)
+        t.show()
+
+        # Simulate the destroyed-widget RuntimeError that PyQt6 raises on
+        # Windows when accessing a deleted C++ object.
+        original_viewport = t._view.viewport
+
+        def raise_runtime_error():
+            raise RuntimeError("wrapped C++ object has been deleted")
+
+        t._view.viewport = raise_runtime_error
+
+        # Old code: _deferred_stretch() would call _do_stretch() which
+        # calls self._view.viewport() → crash.  New code: catches it.
+        t._deferred_stretch()  # must not raise
+
+        # Restore and close so teardown doesn't hit the mock
+        t._view.viewport = original_viewport
+        t.close()
+
+    def test_rapid_resize_then_close(self, qtbot, sample_df):
+        """Simulate the real-world pattern: rapid resizes immediately followed by close."""
+        t = DataFrameTable(columns=_basic_columns())
+        qtbot.addWidget(t)
+        t.set_data(sample_df)
+        t.show()
+
+        # Rapid resizes (each restarts the timer)
+        for w in range(400, 800, 50):
+            t.resize(w, 400)
+
+        # Immediately close — before timer fires
+        t.close()
+        assert not t._resize_timer.isActive()
+
+        # Process any remaining events — must not crash
+        QApplication.processEvents()
 
 
 class TestRegressionScrollbar:

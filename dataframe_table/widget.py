@@ -26,7 +26,13 @@ from typing import List, Optional, Set, Union
 
 import pandas as pd
 from PyQt6.QtCore import QItemSelectionModel, QTimer, Qt, pyqtSignal
-from PyQt6.QtWidgets import QAbstractItemView, QHeaderView, QTableView, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QHeaderView,
+    QTableView,
+    QVBoxLayout,
+    QWidget,
+)
 
 from .column import ColumnDef
 from .filter_bar import FilterBar
@@ -318,6 +324,11 @@ class DataFrameTable(QWidget):
         self._resize_timer.start()
 
     def _deferred_stretch(self) -> None:
+        # Guard: if the widget is being torn down, bail out.
+        try:
+            self._view.viewport()
+        except RuntimeError:
+            return
         self._do_stretch()
 
     def _do_stretch(self) -> None:
@@ -358,6 +369,10 @@ class DataFrameTable(QWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self._schedule_stretch()
+
+    def closeEvent(self, event):
+        self._resize_timer.stop()
+        super().closeEvent(event)
 
     def _on_header_clicked(self, logical_index: int) -> None:
         col = self._columns[logical_index]
