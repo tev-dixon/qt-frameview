@@ -155,9 +155,6 @@ class DataFrameTable(QWidget):
     def set_data(self, df: pd.DataFrame) -> None:
         """Load a new DataFrame (or replace existing data)."""
         self._model.set_dataframe(df)
-        for col in self._columns:
-            if col.filter_widget is not None and col.key in df.columns:
-                col.filter_widget.update_data(df[col.key])
         self._do_stretch()
         self._schedule_stretch()
 

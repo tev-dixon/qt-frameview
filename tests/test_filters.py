@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import inspect
 
-import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
@@ -46,13 +45,17 @@ class TestFiltering:
             assert m.data(m.index(r, 2), Qt.ItemDataRole.UserRole) > 500
 
     def test_dropdown_filter(self, qtbot, sample_df):
-        df_filt = DropdownFilter()
+        categories = sorted(sample_df["category"].unique())
+        df_filt = DropdownFilter(options_fn=lambda: categories)
         cols = _basic_columns()
         cols[4] = ColumnDef(key="category", header="Cat", stretch=1, filter_widget=df_filt)
         t = DataFrameTable(columns=cols)
         qtbot.addWidget(t)
         t.set_data(sample_df)
 
+        # Populate by opening the dropdown
+        df_filt._combo.showPopup()
+        df_filt._combo.hidePopup()
         assert df_filt._combo.count() == 4  # (All) + A, B, C
 
         df_filt._combo.setCurrentText("A")
@@ -87,30 +90,17 @@ class TestRegressionFilters:
             assert "parent" not in params, f"{cls.__name__} still accepts `parent`"
 
 
-class TestDropdownModes:
-    """DropdownFilter operates in three mutually exclusive modes."""
+class TestDropdownFilter:
+    """DropdownFilter with options_fn."""
 
-    def test_auto_mode_populates_from_data(self, qtbot, sample_df):
-        """Default (no options, no options_fn) populates from update_data."""
+    def test_no_fn_starts_with_all_only(self):
+        """Without options_fn, dropdown has just (All)."""
         filt = DropdownFilter()
-        assert filt._mode == "auto"
-        filt.update_data(sample_df["category"])
-        # (All) + unique categories
-        assert filt._combo.count() == 1 + sample_df["category"].nunique()
+        assert filt._combo.count() == 1
+        assert filt._combo.currentText() == "(All)"
+        assert not filt.is_active()
 
-    def test_fixed_mode_ignores_update_data(self, qtbot, sample_df):
-        """Fixed options are set at init and never overwritten."""
-        filt = DropdownFilter(options=["X", "Y", "Z"])
-        assert filt._mode == "fixed"
-        assert filt._combo.count() == 4  # (All) + X, Y, Z
-
-        filt.update_data(sample_df["category"])
-        # Still the original options — update_data is a no-op
-        assert filt._combo.count() == 4
-        texts = [filt._combo.itemText(i) for i in range(filt._combo.count())]
-        assert texts == ["(All)", "X", "Y", "Z"]
-
-    def test_dynamic_mode_calls_fn_on_popup(self, qtbot):
+    def test_options_fn_called_on_popup(self, qtbot):
         """options_fn is called every time the dropdown opens."""
         call_count = 0
         items = ["A", "B"]
@@ -121,33 +111,19 @@ class TestDropdownModes:
             return items
 
         filt = DropdownFilter(options_fn=get_options)
-        assert filt._mode == "dynamic"
 
-        # Simulate popup open
         filt._combo.showPopup()
         filt._combo.hidePopup()
         assert call_count == 1
         assert filt._combo.count() == 3  # (All) + A, B
 
-        # Change the source and reopen
         items.append("C")
         filt._combo.showPopup()
         filt._combo.hidePopup()
         assert call_count == 2
         assert filt._combo.count() == 4  # (All) + A, B, C
 
-    def test_dynamic_mode_ignores_update_data(self, qtbot, sample_df):
-        """update_data is a no-op in dynamic mode."""
-        filt = DropdownFilter(options_fn=lambda: ["P", "Q"])
-        filt._combo.showPopup()
-        filt._combo.hidePopup()
-        assert filt._combo.count() == 3  # (All) + P, Q
-
-        filt.update_data(sample_df["category"])
-        # Still P, Q — not overwritten
-        assert filt._combo.count() == 3
-
-    def test_dynamic_preserves_selection(self, qtbot):
+    def test_preserves_selection_across_popup(self, qtbot):
         """If the previously selected value still exists, it stays selected."""
         filt = DropdownFilter(options_fn=lambda: ["A", "B", "C"])
         filt._combo.showPopup()
@@ -159,13 +135,20 @@ class TestDropdownModes:
         filt._combo.hidePopup()
         assert filt._combo.currentText() == "B"
 
-    def test_both_options_and_fn_raises(self):
-        """Passing both options and options_fn is an error."""
-        with pytest.raises(ValueError, match="not both"):
-            DropdownFilter(options=["A"], options_fn=lambda: ["B"])
+    def test_selection_falls_back_to_all(self, qtbot):
+        """If the selected value disappears, falls back to (All)."""
+        items = ["A", "B"]
+        filt = DropdownFilter(options_fn=lambda: items)
+        filt._combo.showPopup()
+        filt._combo.hidePopup()
+        filt._combo.setCurrentText("B")
 
-    def test_dynamic_filter_applies_correctly(self, qtbot, sample_df):
-        """Dynamic mode still filters data correctly."""
+        items.remove("B")
+        filt._combo.showPopup()
+        filt._combo.hidePopup()
+        assert filt._combo.currentText() == "(All)"
+
+    def test_filter_applies_correctly(self, qtbot, sample_df):
         filt = DropdownFilter(options_fn=lambda: ["A", "B", "C"])
         filt._combo.showPopup()
         filt._combo.hidePopup()
@@ -175,3 +158,14 @@ class TestDropdownModes:
         mask = filt.apply_filter(sample_df["category"])
         assert mask.sum() == (sample_df["category"] == "A").sum()
         assert mask.sum() < len(sample_df)
+
+    def test_reset_clears_selection(self, qtbot):
+        filt = DropdownFilter(options_fn=lambda: ["A", "B"])
+        filt._combo.showPopup()
+        filt._combo.hidePopup()
+        filt._combo.setCurrentText("A")
+        assert filt.is_active()
+
+        filt.reset()
+        assert not filt.is_active()
+        assert filt._combo.currentText() == "(All)"

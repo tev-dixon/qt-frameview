@@ -41,7 +41,7 @@ _dynamic_tags = ["Sale", "New", "Clearance"]
 
 def get_tags() -> list[str]:
     """Called every time the Tags dropdown is opened."""
-    return _dynamic_tags
+    return list(_dynamic_tags)
 
 
 class MainWindow(QMainWindow):
@@ -79,12 +79,15 @@ class MainWindow(QMainWindow):
             ColumnDef(
                 key="category", header="Category", stretch=1,
                 sortable=True,
-                filter_widget=DropdownFilter(),  # auto mode — populates from data
+                # options_fn reads from self.df so the list is always current
+                filter_widget=DropdownFilter(
+                    options_fn=lambda: sorted(self.df["category"].dropna().unique()),
+                ),
             ),
             ColumnDef(
                 key="tag", header="Tag", stretch=0.8,
                 sortable=True,
-                # dynamic mode — calls get_tags() every time dropdown opens
+                # Dynamic source — get_tags() is called every time dropdown opens
                 filter_widget=DropdownFilter(options_fn=get_tags),
             ),
             ColumnDef(
