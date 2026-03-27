@@ -9,5 +9,5 @@ __all__ = [
     "AbstractFilter",
     "TextFilter",
     "NumericFilter",
-    "DropdownFilter"
+    "DropdownFilter",
 ]
