@@ -3,6 +3,7 @@
 from .AbstractFilter import AbstractFilter
 from .DropdownFilter import DropdownFilter
 from .NumericFilter import NumericFilter
+from .OptionsFilter import OptionsFilter
 from .TextFilter import TextFilter
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "TextFilter",
     "NumericFilter",
     "DropdownFilter",
+    "OptionsFilter",
 ]

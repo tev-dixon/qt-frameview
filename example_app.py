@@ -18,6 +18,7 @@ from dataframe_table import (
     TextFilter,
     NumericFilter,
     DropdownFilter,
+    OptionsFilter,
     CheckBoxDelegate,
     ButtonDelegate,
     SelectionMode
@@ -81,8 +82,9 @@ class MainWindow(QMainWindow):
                 key="category", header="Category", stretch=1,
                 sortable=True,
                 # options_fn reads from self.df so the list is always current
-                filter_widget=DropdownFilter(
+                filter_widget=OptionsFilter(
                     options_fn=lambda: sorted(self.df["category"].dropna().unique()),
+                    multi_select=True
                 ),
             ),
             ColumnDef(
