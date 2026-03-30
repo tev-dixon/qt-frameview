@@ -29,6 +29,7 @@ class _OptionsPopup(QWidget):
         super().__init__(parent, Qt.WindowType.Popup)
         self._multi_select = multi_select
         self._guard = False  # prevents signal loops during programmatic changes
+        self._change_handled = False  # True when itemChanged already processed the click
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -42,6 +43,7 @@ class _OptionsPopup(QWidget):
         self._list = QListWidget()
         if multi_select:
             self._list.itemChanged.connect(self._on_item_changed)
+            self._list.itemClicked.connect(self._on_item_clicked_multi)
         else:
             self._list.itemClicked.connect(self._on_item_clicked_single)
         layout.addWidget(self._list)
@@ -129,6 +131,7 @@ class _OptionsPopup(QWidget):
         """Multi-select: fired by Qt when any check state changes (click or programmatic)."""
         if self._guard:
             return
+        self._change_handled = True
         if item.text() == self._SELECT_ALL_LABEL:
             # (Select All) was toggled — apply to all option items
             new_state = item.checkState()
@@ -142,6 +145,18 @@ class _OptionsPopup(QWidget):
             self._sync_select_all_state()
             self._guard = False
         self.item_clicked.emit()
+
+    def _on_item_clicked_multi(self, item: QListWidgetItem) -> None:
+        """Fallback for checkbox clicks that don't fire itemChanged in Popup windows."""
+        if self._change_handled:
+            self._change_handled = False
+            return
+        new_state = (
+            Qt.CheckState.Unchecked
+            if item.checkState() == Qt.CheckState.Checked
+            else Qt.CheckState.Checked
+        )
+        item.setCheckState(new_state)  # triggers _on_item_changed
 
     def _on_item_clicked_single(self, item: QListWidgetItem) -> None:
         """Single-select: pick and close."""
