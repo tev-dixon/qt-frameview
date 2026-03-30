@@ -100,6 +100,10 @@ class DataFrameTable(QWidget):
     def get_data(self) -> pd.DataFrame:
         return self._model.get_dataframe()
 
+    def clear_data(self) -> None:
+        """Reset the table to an empty state."""
+        self.set_data(pd.DataFrame())
+
     def update_cell(self, source_row: int, col_key: str, value) -> None:
         self._model.update_cell(source_row, col_key, value)
 
