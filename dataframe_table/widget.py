@@ -37,6 +37,8 @@ _SELECTION_MODE_MAP = {
 
 class DataFrameTable(QWidget):
     selection_changed = pyqtSignal(set)
+    data_set = pyqtSignal()
+    data_updated = pyqtSignal(set)
 
     def __init__(
         self,
@@ -96,6 +98,7 @@ class DataFrameTable(QWidget):
 
     def set_data(self, df: pd.DataFrame) -> None:
         self._model.set_dataframe(df)
+        self.data_set.emit()
 
     def get_data(self) -> pd.DataFrame:
         return self._model.get_dataframe()
@@ -106,9 +109,11 @@ class DataFrameTable(QWidget):
 
     def update_cell(self, source_row: int, col_key: str, value) -> None:
         self._model.update_cell(source_row, col_key, value)
+        self.data_updated.emit({source_row})
 
     def update_cells_bulk(self, updates: list) -> None:
         self._model.update_cells_bulk(updates)
+        self.data_updated.emit({row for row, _, _ in updates})
 
     # ---- selection ----------------------------------------------------
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Callable, Optional
+
 from PyQt6.QtCore import QEvent, QModelIndex, QRect, Qt
 from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import QApplication, QStyle, QStyleOptionButton, QStyleOptionViewItem, QStyledItemDelegate
@@ -7,6 +9,10 @@ from PyQt6.QtWidgets import QApplication, QStyle, QStyleOptionButton, QStyleOpti
 
 
 class CheckBoxDelegate(QStyledItemDelegate):
+
+    def __init__(self, on_toggle: Optional[Callable[[int, bool], None]] = None, parent=None):
+        super().__init__(parent)
+        self._on_toggle = on_toggle
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         self.initStyleOption(option, index)
@@ -25,7 +31,9 @@ class CheckBoxDelegate(QStyledItemDelegate):
             cb_rect = self._checkbox_rect(option)
             if cb_rect.contains(event.position().toPoint()):
                 current = bool(index.data(Qt.ItemDataRole.UserRole))
-                model.setData(index, not current, Qt.ItemDataRole.EditRole)
+                if self._on_toggle:
+                    source_row = model.source_index(index.row())
+                    self._on_toggle(source_row, current)
                 return True
         return False
 

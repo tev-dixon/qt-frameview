@@ -76,7 +76,9 @@ class MainWindow(QMainWindow):
             ),
             ColumnDef(
                 key="in_stock", header="In Stock", stretch=0.5,
-                delegate=CheckBoxDelegate(),
+                delegate=CheckBoxDelegate(
+                    on_toggle=lambda row, val: self.table.update_cell(row, "in_stock", not val),
+                ),
             ),
             ColumnDef(
                 key="category", header="Category", stretch=1,
