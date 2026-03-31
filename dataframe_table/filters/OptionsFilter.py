@@ -29,8 +29,6 @@ class _OptionsPopup(QWidget):
     def __init__(self, multi_select: bool, parent: QWidget | None = None):
         super().__init__(parent, Qt.WindowType.Popup)
         self._multi_select = multi_select
-        self._guard = False  # prevents signal loops during programmatic changes
-        self._change_handled = False  # True when itemChanged already processed the click
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -43,7 +41,7 @@ class _OptionsPopup(QWidget):
 
         self._list = QListWidget()
         if multi_select:
-            self._list.itemChanged.connect(self._on_item_changed)
+            self._checked_set: set[str] = set()
             self._list.itemClicked.connect(self._on_item_clicked_multi)
         else:
             self._list.itemClicked.connect(self._on_item_clicked_single)
@@ -54,10 +52,11 @@ class _OptionsPopup(QWidget):
     # -- public API --
 
     def populate(self, options: Sequence[str], checked: set[str] | None = None) -> None:
-        self._guard = True
+        self._list.blockSignals(True)
         self._search.clear()
         self._list.clear()
         if self._multi_select:
+            self._checked_set = set(checked) if checked else set()
             select_all = QListWidgetItem(self._SELECT_ALL_LABEL)
             select_all.setFlags(select_all.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             select_all.setCheckState(Qt.CheckState.Unchecked)
@@ -74,7 +73,7 @@ class _OptionsPopup(QWidget):
             self._list.addItem(item)
         if self._multi_select:
             self._sync_select_all_state()
-        self._guard = False
+        self._list.blockSignals(False)
 
     def get_checked(self) -> set[str]:
         result: set[str] = set()
@@ -128,34 +127,31 @@ class _OptionsPopup(QWidget):
                 continue
             item.setHidden(text_lower not in label.lower())
 
-    def _on_item_changed(self, item: QListWidgetItem) -> None:
-        """Multi-select: fired by Qt when any check state changes (click or programmatic)."""
-        if self._guard:
-            return
-        self._change_handled = True
-        if item.text() == self._SELECT_ALL_LABEL:
-            new_state = item.checkState()
-            self._guard = True
+    def _on_item_clicked_multi(self, item: QListWidgetItem) -> None:
+        """Toggle from our tracked set — immune to Qt's auto-toggle behavior."""
+        self._list.blockSignals(True)
+        text = item.text()
+        if text == self._SELECT_ALL_LABEL:
+            all_options = {opt.text() for opt in self._option_items()}
+            if self._checked_set >= all_options:
+                self._checked_set.clear()
+                new_state = Qt.CheckState.Unchecked
+            else:
+                self._checked_set = all_options
+                new_state = Qt.CheckState.Checked
+            item.setCheckState(new_state)
             for opt in self._option_items():
                 opt.setCheckState(new_state)
-            self._guard = False
         else:
-            self._guard = True
+            if text in self._checked_set:
+                self._checked_set.discard(text)
+                item.setCheckState(Qt.CheckState.Unchecked)
+            else:
+                self._checked_set.add(text)
+                item.setCheckState(Qt.CheckState.Checked)
             self._sync_select_all_state()
-            self._guard = False
+        self._list.blockSignals(False)
         self.item_clicked.emit()
-
-    def _on_item_clicked_multi(self, item: QListWidgetItem) -> None:
-        """Fallback for checkbox clicks that don't fire itemChanged in Popup windows."""
-        if self._change_handled:
-            self._change_handled = False
-            return
-        new_state = (
-            Qt.CheckState.Unchecked
-            if item.checkState() == Qt.CheckState.Checked
-            else Qt.CheckState.Checked
-        )
-        item.setCheckState(new_state)  # triggers _on_item_changed
 
     def _on_item_clicked_single(self, item: QListWidgetItem) -> None:
         """Single-select: pick and close."""
