@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dataframe-table"
+name = "EasyQtPandasTable"
 version = "0.1.1"
 description = "A PyQt6 table widget backed by pandas DataFrames"
 readme = "README.md"
