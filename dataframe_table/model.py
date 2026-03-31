@@ -77,6 +77,10 @@ class DataFrameTableModel(QAbstractTableModel):
         self._sort_col_idx = col_idx
         self._sort_ascending = ascending
 
+    def get_sort(self) -> tuple[Optional[int], bool]:
+        """Return (col_idx, ascending). col_idx is None if unsorted."""
+        return self._sort_col_idx, self._sort_ascending
+
     def _rebuild_view(self) -> None:
         n = len(self._df)
         if n == 0:

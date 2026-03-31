@@ -119,6 +119,31 @@ class DataFrameTable(QWidget):
         self._model.update_cells_bulk(updates)
         self.data_updated.emit({row for row, _, _ in updates})
 
+    def row_count(self) -> int:
+        """Number of visible rows (after filtering)."""
+        return self._model.rowCount()
+
+    def source_index(self, view_row: int) -> int:
+        """Map a visible row position to the source DataFrame iloc index."""
+        return self._model.source_index(view_row)
+
+    def sort_by(self, key: str, ascending: bool = True) -> None:
+        """Sort by column key. Pass None to clear sorting."""
+        col_idx = self._col_index(key)
+        if col_idx is None:
+            return
+        self._model.set_sort(col_idx, ascending)
+        self._model.rebuild_view()
+        header = self._view.horizontalHeader()
+        header.setSortIndicator(col_idx, Qt.SortOrder.AscendingOrder if ascending else Qt.SortOrder.DescendingOrder)
+        header.setSortIndicatorShown(True)
+
+    def clear_sort(self) -> None:
+        """Remove sorting, restore original DataFrame order."""
+        self._model.set_sort(None, True)
+        self._model.rebuild_view()
+        self._view.horizontalHeader().setSortIndicatorShown(False)
+
     # ---- selection ----------------------------------------------------
 
     def set_selected_rows(self, source_indices: Set[int], silent: bool = False) -> None:
@@ -216,10 +241,6 @@ class DataFrameTable(QWidget):
     def table_view(self) -> QTableView:
         return self._view
 
-    @property
-    def table_model(self) -> DataFrameTableModel:
-        return self._model
-
     # ==================================================================
     # Internal
     # ==================================================================
@@ -274,15 +295,12 @@ class DataFrameTable(QWidget):
         col = self._columns[logical_index]
         if not col.sortable:
             return
-        header = self._view.horizontalHeader()
-        if self._model._sort_col_idx == logical_index:
-            asc = not self._model._sort_ascending
+        sort_col_idx, sort_ascending = self._model.get_sort()
+        if sort_col_idx == logical_index:
+            asc = not sort_ascending
         else:
             asc = True
-        self._model.set_sort(logical_index, asc)
-        self._model.rebuild_view()
-        header.setSortIndicator(logical_index, Qt.SortOrder.AscendingOrder if asc else Qt.SortOrder.DescendingOrder)
-        header.setSortIndicatorShown(True)
+        self.sort_by(col.key, asc)
 
     def _on_filter_changed(self) -> None:
         self._model.rebuild_view()
