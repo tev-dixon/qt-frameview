@@ -25,6 +25,7 @@ class NumericFilter(AbstractFilter):
         self._edit = QLineEdit()
         self._edit.setPlaceholderText(placeholder)
         self._edit.textChanged.connect(self._emit)
+        self._edit.returnPressed.connect(self.return_pressed)
         layout.addWidget(self._edit)
 
     def _emit(self):
@@ -39,6 +40,24 @@ class NumericFilter(AbstractFilter):
 
     def reset(self) -> None:
         self._edit.clear()
+
+    def value(self) -> str:
+        return self._edit.text()
+
+    def set_value(self, value: str) -> None:
+        self._edit.setText(value)
+
+    def operator(self) -> str:
+        return self._op.currentText()
+
+    def set_operator(self, op: str) -> None:
+        idx = self._op.findText(op)
+        if idx >= 0:
+            self._op.setCurrentIndex(idx)
+
+    def focus(self) -> None:
+        self._edit.setFocus()
+        self._edit.selectAll()
 
     def apply_filter(self, series: pd.Series) -> np.ndarray:
         try:

@@ -12,6 +12,7 @@ class AbstractFilter(QWidget):
     """Base class for column filter widgets."""
 
     filter_changed = pyqtSignal()
+    return_pressed = pyqtSignal()
 
     @abstractmethod
     def apply_filter(self, series: pd.Series) -> np.ndarray:
@@ -25,6 +26,10 @@ class AbstractFilter(QWidget):
 
     def reset(self) -> None:
         """Clear the filter to its default (no filtering) state."""
+        ...
+
+    def focus(self) -> None:
+        """Put the filter in a ready-to-type state."""
         ...
 
     def update_data(self, series: pd.Series) -> None:

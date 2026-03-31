@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from .AbstractFilter import AbstractFilter
 
-from typing import Optional, Sequence, Callable
-
 import numpy as np
 import pandas as pd
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout
@@ -11,9 +9,9 @@ from PyQt6.QtWidgets import QComboBox, QHBoxLayout
 
 class _LazyComboBox(QComboBox):
  
-    def __init__(self, options_fn: Callable[[], Sequence[str]], all_label: str):
+    def __init__(self, options: list, all_label: str):
         super().__init__()
-        self._options_fn = options_fn
+        self._options = options
         self._all_label = all_label
  
     def showPopup(self):
@@ -21,7 +19,7 @@ class _LazyComboBox(QComboBox):
         self.blockSignals(True)
         self.clear()
         self.addItem(self._all_label)
-        for v in self._options_fn():
+        for v in self._options:
             self.addItem(str(v))
         idx = self.findText(current)
         self.setCurrentIndex(idx if idx >= 0 else 0)
@@ -35,14 +33,14 @@ class DropdownFilter(AbstractFilter):
  
     def __init__(
         self,
-        options_fn: Optional[Callable[[], Sequence[str]]] = None,
+        options: list = None,
     ):
         super().__init__()
         layout = QHBoxLayout(self)
         layout.setContentsMargins(1, 1, 1, 1)
  
-        if options_fn is not None:
-            self._combo = _LazyComboBox(options_fn, self._ALL_LABEL)
+        if options is not None:
+            self._combo = _LazyComboBox(options, self._ALL_LABEL)
         else:
             self._combo = QComboBox()
  

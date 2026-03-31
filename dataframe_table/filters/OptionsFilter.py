@@ -209,6 +209,37 @@ class OptionsFilter(AbstractFilter):
         self._selected = None
         self._update_display()
 
+    def checked(self) -> set[str]:
+        """Return the currently checked options (multi-select)."""
+        if not self._multi_select:
+            raise RuntimeError("Tried to use a multi-select method when self._multi_select = False")
+        return set(self._checked)
+
+    def set_checked(self, values: set[str]) -> None:
+        """Set checked options (multi-select) and emit filter_changed."""
+        if not self._multi_select:
+            raise RuntimeError("Tried to use a multi-select method when self._multi_select = False")
+        self._checked = set(values)
+        self._update_display()
+        self.filter_changed.emit()
+
+    def selected(self) -> str | None:
+        """Return the currently selected option (single-select)."""
+        if self._multi_select:
+            raise RuntimeError("Tried to use a single-select method when self._multi_select = True")
+        return self._selected
+
+    def set_selected(self, value: str | None) -> None:
+        """Set selected option (single-select) and emit filter_changed."""
+        if self._multi_select:
+            raise RuntimeError("Tried to use a single-select method when self._multi_select = True")
+        self._selected = value
+        self._update_display()
+        self.filter_changed.emit()
+
+    def focus(self) -> None:
+        self._on_display_clicked(None)
+
     def apply_filter(self, series: pd.Series) -> np.ndarray:
         if self._multi_select:
             if not self._checked:
@@ -262,4 +293,3 @@ class OptionsFilter(AbstractFilter):
             self._display.setText(f"{n} selected" if n > 0 else "")
         else:
             self._display.setText(self._selected or "")
-    

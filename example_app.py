@@ -79,6 +79,7 @@ class MainWindow(QMainWindow):
                 delegate=CheckBoxDelegate(
                     on_toggle=lambda row, val: self.table.update_cell(row, "in_stock", not val),
                 ),
+                filter_widget=DropdownFilter(options=[True, False])
             ),
             ColumnDef(
                 key="category", header="Category", stretch=1,
@@ -93,7 +94,7 @@ class MainWindow(QMainWindow):
                 key="tag", header="Tag", stretch=0.8,
                 sortable=True,
                 # Dynamic source — get_tags() is called every time dropdown opens
-                filter_widget=DropdownFilter(options_fn=get_tags),
+                filter_widget=OptionsFilter(options_fn=get_tags),
             ),
             ColumnDef(
                 key="_delete", header="", stretch=0.5,
@@ -217,7 +218,8 @@ class MainWindow(QMainWindow):
         filt = self.table.get_filter("name")
         if filt is not None:
             self.table.set_filter_bar_visible(True)
-            filt._edit.setText("Item 1")
+            filt.set_text("Item 1")
+            filt.focus()
             print("Programmatically set name filter to 'Item 1'")
         else:
             print("No filter found for 'name'")
