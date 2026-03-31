@@ -45,7 +45,7 @@ class DataFrameTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def get_dataframe(self) -> pd.DataFrame:
-        return self._df
+        return self._df.copy()
 
     def update_cell(self, source_row: int, col_key: str, value: Any) -> None:
         if col_key not in self._df.columns:
