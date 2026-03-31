@@ -51,6 +51,7 @@ class DataFrameTable(QWidget):
     ):
         super().__init__(parent)
         self._columns = columns
+        self._selection_mode = selection_mode
         self._table_style = table_style or TableStyle()
 
         # ---- model ----
@@ -147,6 +148,8 @@ class DataFrameTable(QWidget):
     # ---- selection ----------------------------------------------------
 
     def set_selected_rows(self, source_indices: Set[int], silent: bool = False) -> None:
+        if self._selection_mode == SelectionMode.Single and len(source_indices) > 1:
+            raise ValueError("set_selected_rows() called with multiple indices in Single selection mode")
         sel = self._view.selectionModel()
         if silent:
             sel.blockSignals(True)
@@ -173,6 +176,21 @@ class DataFrameTable(QWidget):
         for idx in self._view.selectionModel().selectedRows():
             rows.add(self._model.source_index(idx.row()))
         return rows
+
+    def set_selected_row(self, source_index: int, silent: bool = False) -> None:
+        """Select a single row. Convenience wrapper around *set_selected_rows*."""
+        self.set_selected_rows({source_index}, silent=silent)
+
+    def get_selected_row_index(self) -> Optional[int]:
+        """Return the source index of the selected row, or *None*.
+
+        In multi/extended mode, returns the first (topmost) selected row.
+        """
+        rows = self._view.selectionModel().selectedRows()
+        if not rows:
+            return None
+        # selectedRows() is in view order, first entry is topmost
+        return self._model.source_index(rows[0].row())
 
     def get_row(self, source_index: int) -> dict:
         row = self._model.get_dataframe().iloc[source_index]
