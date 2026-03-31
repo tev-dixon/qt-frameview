@@ -23,7 +23,6 @@ class CheckBoxDelegate(QStyledItemDelegate):
         if self._is_disabled is None:
             return False
         source_row = index.model().source_index(index.row())
-        print(f"_row_disabled: view_row={index.row()}, source_row={source_row}, result={self._is_disabled(source_row)}")
         return self._is_disabled(source_row)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
