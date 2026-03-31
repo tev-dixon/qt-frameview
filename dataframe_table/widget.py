@@ -102,7 +102,7 @@ class DataFrameTable(QWidget):
         if not isinstance(data, pd.DataFrame):
             data = pd.DataFrame(data)
         self._model.set_dataframe(data)
-        self.data_set.emit(set(range(len(data))))
+        self.data_set.emit()
 
     def get_data(self) -> pd.DataFrame:
         return self._model.get_dataframe()
