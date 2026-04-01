@@ -283,6 +283,20 @@ class DataFrameTable(QWidget):
             if col.key == key:
                 return col.filter_widget
         return None
+    
+
+    # ---- scrolling ----------------------------------------------------
+    def scroll_to(self, source_index: int, scroll_hint: QAbstractItemView.ScrollHint = QAbstractItemView.ScrollHint.PositionAtTop) -> None:
+        """Scroll so that the row with the given source index is at the top."""
+        view_row = self._model.view_row_for_source(source_index)
+        if view_row is None:
+            return
+        idx = self._model.index(view_row, 0)
+        self._view.scrollTo(idx, scroll_hint)
+
+    def scroll_to_top(self) -> None:
+        """Jump to the very top of the table."""
+        self._view.scrollToTop()
 
     # ---- accessors ----------------------------------------------------
 
