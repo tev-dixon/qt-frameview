@@ -139,12 +139,12 @@ class DataFrameTable(QWidget):
                 (df["age"] >= 18) & df["name"].str.startswith("A"))
         """
         self._model.set_programmatic_filter(predicate)
-        self._model.rebuild_view()
+        self.rebuild_view()
 
     def clear_row_filter(self) -> None:
         """Remove the programmatic row filter."""
         self._model.set_programmatic_filter(None)
-        self._model.rebuild_view()
+        self.rebuild_view()
     
     def set_row_filter_eq(self, **kwargs):
         def predicate(df):
@@ -161,7 +161,7 @@ class DataFrameTable(QWidget):
         if col_idx is None:
             return
         self._model.set_sort(col_idx, ascending)
-        self._model.rebuild_view()
+        self.rebuild_view()
         header = self._view.horizontalHeader()
         header.setSortIndicator(col_idx, Qt.SortOrder.AscendingOrder if ascending else Qt.SortOrder.DescendingOrder)
         header.setSortIndicatorShown(True)
@@ -169,8 +169,12 @@ class DataFrameTable(QWidget):
     def clear_sort(self) -> None:
         """Remove sorting, restore original DataFrame order."""
         self._model.set_sort(None, True)
-        self._model.rebuild_view()
+        self.rebuild_view()
         self._view.horizontalHeader().setSortIndicatorShown(False)
+    
+    def rebuild_view(self) -> None:
+        self._model.rebuild_view()
+        self.selection_changed.emit(self.get_selected_row_indexes())
 
     # ---- selection ----------------------------------------------------
 
@@ -272,7 +276,7 @@ class DataFrameTable(QWidget):
                 col.filter_widget.blockSignals(True)
                 col.filter_widget.reset()
                 col.filter_widget.blockSignals(False)
-        self._model.rebuild_view()
+        self.rebuild_view()
 
     def get_filter(self, key: str):
         for col in self._columns:
@@ -348,7 +352,7 @@ class DataFrameTable(QWidget):
         self.sort_by(col.key, asc)
 
     def _on_filter_changed(self) -> None:
-        self._model.rebuild_view()
+        self.rebuild_view()
 
     def _on_selection_changed(self, selected, deselected) -> None:
         self.selection_changed.emit(self.get_selected_row_indexes())
