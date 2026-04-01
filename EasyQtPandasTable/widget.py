@@ -127,6 +127,33 @@ class DataFrameTable(QWidget):
     def source_index(self, view_row: int) -> int:
         """Map a visible row position to the source DataFrame iloc index."""
         return self._model.source_index(view_row)
+    
+    def set_row_filter(self, predicate: Callable[[pd.DataFrame], "pd.Series[bool]"]) -> None:
+        """Apply an arbitrary row filter. The predicate receives the full
+        source DataFrame and must return a boolean Series of the same length.
+
+        Example:
+            table.set_row_filter(lambda df: df["status"] == "active")
+            table.set_row_filter(lambda df: df["amount"] > 100)
+            table.set_row_filter(lambda df:
+                (df["age"] >= 18) & df["name"].str.startswith("A"))
+        """
+        self._model.set_programmatic_filter(predicate)
+        self._model.rebuild_view()
+
+    def clear_row_filter(self) -> None:
+        """Remove the programmatic row filter."""
+        self._model.set_programmatic_filter(None)
+        self._model.rebuild_view()
+    
+    def set_row_filter_eq(self, **kwargs):
+        def predicate(df):
+            mask = pd.Series(True, index=df.index)
+            for col, val in kwargs.items():
+                if col in df.columns:
+                    mask &= df[col] == val
+            return mask
+        self.set_row_filter(predicate)
 
     def sort_by(self, key: str, ascending: bool = True) -> None:
         """Sort by column key. Pass None to clear sorting."""
