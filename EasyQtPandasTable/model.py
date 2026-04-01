@@ -44,6 +44,9 @@ class DataFrameTableModel(QAbstractTableModel):
     def set_dataframe(self, df: pd.DataFrame) -> None:
         self.beginResetModel()
         self._df = df.copy()
+        for col in self._columns:
+            if col.dtype is not None and col.key in self._df.columns:
+                self._df[col.key] = self._df[col.key].astype(col.dtype)
         self._rebuild_view()
         self.endResetModel()
 
@@ -161,6 +164,10 @@ class DataFrameTableModel(QAbstractTableModel):
             return raw
         if role == Qt.ItemDataRole.TextAlignmentRole:
             return int(col_def.alignment)
+        if role == Qt.ItemDataRole.ForegroundRole:
+            if col_def.style is not None:
+                return col_def.style(raw)
+            return None
         return None
 
     def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
