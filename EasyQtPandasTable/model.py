@@ -20,6 +20,7 @@ class DataFrameTableModel(QAbstractTableModel):
         # Sort state
         self._sort_col_idx: Optional[int] = None
         self._sort_ascending: bool = True
+        self._programmatic_filter: Optional[Callable[[pd.DataFrame], "pd.Series[bool]"]] = None
 
     # ------------------------------------------------------------------
     # Public helpers
@@ -34,6 +35,8 @@ class DataFrameTableModel(QAbstractTableModel):
         hits = np.where(self._view_indices == source_iloc)[0]
         return int(hits[0]) if len(hits) else None
 
+    def set_programmatic_filter(self, predicate: Optional[Callable[[pd.DataFrame], "pd.Series[bool]"]]) -> None:
+        self._programmatic_filter = predicate
     # ------------------------------------------------------------------
     # Data loading
     # ------------------------------------------------------------------
@@ -87,7 +90,7 @@ class DataFrameTableModel(QAbstractTableModel):
             self._view_indices = np.array([], dtype=np.intp)
             return
 
-        # ---------- filter ----------
+        # ---------- widget-based filters ----------
         mask = np.ones(n, dtype=bool)
         for col in self._columns:
             fw = col.filter_widget
@@ -96,6 +99,16 @@ class DataFrameTableModel(QAbstractTableModel):
                 if isinstance(col_mask, pd.Series):
                     col_mask = col_mask.values
                 mask &= col_mask.astype(bool)
+
+        # ---------- programmatic filter ----------
+        if self._programmatic_filter is not None:
+            try:
+                prog_mask = self._programmatic_filter(self._df)
+                if isinstance(prog_mask, pd.Series):
+                    prog_mask = prog_mask.values
+                mask &= prog_mask.astype(bool)
+            except Exception:
+                pass  # bad predicate — fail open, don't crash the view
 
         indices = np.where(mask)[0]
 
