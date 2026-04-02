@@ -41,6 +41,7 @@ class DataFrameTable(QWidget):
     selection_changed = pyqtSignal(set)
     data_set = pyqtSignal()
     data_updated = pyqtSignal(set)
+    visible_rows_changed = pyqtSignal(set)
 
     def __init__(
         self,
@@ -68,6 +69,8 @@ class DataFrameTable(QWidget):
         self._view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._view.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
         self._view.selectionModel().selectionChanged.connect(self._on_selection_changed)
+        self._model.modelReset.connect(self._on_model_reset)
+
 
         # ---- delegates ----
         for i, col in enumerate(columns):
@@ -370,3 +373,8 @@ class DataFrameTable(QWidget):
 
     def _on_selection_changed(self, selected, deselected) -> None:
         self.selection_changed.emit(self.get_selected_row_indexes())
+
+    def _on_model_reset(self) -> None:
+        visible = set(self._model._view_indices.tolist())
+        self.visible_rows_changed.emit(visible)
+    
