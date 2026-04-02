@@ -239,29 +239,31 @@ class DataFrameTable(QWidget):
     
     def get_row_idxs_where(
         self, key: str, condition: Union[Callable[[any], bool], any], only_visible: bool = False
-    ) -> list[int]:
+    ) -> set[int]:
         """
-        Return a list of source row indices where the column `key` satisfies the condition.
+        Return a set of source row indices where the column `key` satisfies the condition.
         Optionally restrict to currently visible rows.
         """
         df = self.get_data()
         if key not in df.columns:
-            return []
+            raise KeyError(f"Key '{key}' is not in the DataFrame!")
 
         # Pre-filter by visible rows if requested
         if only_visible:
-            visible_idxs = list(self._model._view_indices.tolist())
-            if not visible_idxs:
-                return []
-            df = df.loc[visible_idxs]
+            visible_idxs = self._model._view_indices
+            if len(visible_idxs) == 0:
+                return set()
+            # Convert to list or Index for .loc
+            df = df.loc[list(visible_idxs)]
 
-        # Apply condition
+        # Apply condition only on the filtered DataFrame
         if callable(condition):
             mask = df[key].apply(condition)
         else:
             mask = df[key] == condition
 
-        return df.index[mask].tolist()
+        # Return as set
+        return set(df.index[mask])
 
     def get_row_idx_where(
         self, key: str, condition: Union[Callable[[any], bool], any], only_visible: bool = False
@@ -272,7 +274,7 @@ class DataFrameTable(QWidget):
         """
         idxs = self.get_row_idxs_where(key, condition, only_visible)
         if idxs:
-            return idxs[0]
+            return min(idxs)
         return None
 
     @staticmethod
